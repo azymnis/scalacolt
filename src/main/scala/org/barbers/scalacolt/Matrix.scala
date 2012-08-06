@@ -2,7 +2,7 @@ package org.barbers.scalacolt
 
 import cern.colt.function.IntIntDoubleFunction
 import cern.colt.matrix.DoubleMatrix2D
-import cern.colt.matrix.impl.DenseDoubleMatrix2D
+import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
 import cern.colt.matrix.linalg.Algebra
 
 import Numeric.Implicits._
@@ -36,6 +36,15 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
     }
     val newMat = cMatrix.copy.forEachNonZero(multFunc)
     new Matrix(newMat)
+  }
+
+  def *(other : Matrix) = {
+    val out = (this.cMatrix, other.cMatrix) match {
+      case (a : SparseDoubleMatrix2D, b : SparseDoubleMatrix2D) => new SparseDoubleMatrix2D(this.rows, other.columns)
+      case _ => new DenseDoubleMatrix2D(this.rows, other.columns)
+    }
+    this.cMatrix.zMult(other.cMatrix, out)
+    new Matrix(out)
   }
 
   override def equals(that : Any) = {
