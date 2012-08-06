@@ -1,6 +1,6 @@
 package org.barbers.scalacolt
 
-import cern.colt.function.IntIntDoubleFunction
+import cern.colt.function.{DoubleDoubleFunction, IntIntDoubleFunction}
 import cern.colt.matrix.DoubleMatrix2D
 import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
 import cern.colt.matrix.linalg.Algebra
@@ -39,12 +39,24 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   }
 
   def *(other : Matrix) = {
-    val out = (this.cMatrix, other.cMatrix) match {
-      case (a : SparseDoubleMatrix2D, b : SparseDoubleMatrix2D) => new SparseDoubleMatrix2D(this.rows, other.columns)
-      case _ => new DenseDoubleMatrix2D(this.rows, other.columns)
-    }
+    val out = newCMatrix(other, this.rows, other.columns)
     this.cMatrix.zMult(other.cMatrix, out)
     new Matrix(out)
+  }
+
+  def +(other : Matrix) = {
+    val out = this.cMatrix.copy.assign(other.cMatrix, new MatrixAddition)
+    new Matrix(out)
+  }
+
+  def -(other : Matrix) = {
+    val out = this.cMatrix.copy.assign(other.cMatrix, new MatrixSubtraction)
+    new Matrix(out)
+  }
+
+  // Same as matlab backslash
+  def \(other : Matrix) = {
+    new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
   }
 
   override def equals(that : Any) = {
@@ -56,8 +68,23 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   }
   override def hashCode = cMatrix.hashCode
   override def toString = cMatrix.toString
+
+  private def newCMatrix(other : Matrix, r : Int, c : Int) = {
+    (this.cMatrix, other.cMatrix) match {
+      case (a : SparseDoubleMatrix2D, b : SparseDoubleMatrix2D) => new SparseDoubleMatrix2D(r, c)
+      case _ => new DenseDoubleMatrix2D(r, c)
+    }
+  }
 }
 
 class DoubleMultiplier[T : Numeric](c : T) {
   def *(m : Matrix) = m * c
+}
+
+class MatrixAddition extends DoubleDoubleFunction {
+  def apply(x : Double, y : Double) = x + y
+}
+
+class MatrixSubtraction extends DoubleDoubleFunction {
+  def apply(x : Double, y : Double) = x - y
 }
