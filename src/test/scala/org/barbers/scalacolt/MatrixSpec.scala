@@ -88,12 +88,18 @@ class MatrixSpec extends Specification {
       h must_== res
     }
 
-    // TODO: check why this does not work with fat matrices
     "work if F is skinny and full rank" in {
       val F : Matrix = List(List(1, 2.0, 3), List(4.0, 5, 6.0), List(23.0, 8, 9.0), List(32.0, -8, 12.0))
       val g : Matrix = List(List(1), List(1), List(1), List(1))
       val h = F \ g
       h.rows must_== 3
+    }
+
+    "work if F is fat and full rank" in {
+      val F : Matrix = List(List(1, 2.0, 3.0, 4.0), List(4.0, 5, 6.0, 7.0))
+      val g : Matrix = List(List(1), List(1))
+      val h = F \ g
+      (F * h - g).sum must beCloseTo(0, 1e-3)
     }
   }
 }

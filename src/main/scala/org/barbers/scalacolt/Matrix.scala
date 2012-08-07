@@ -3,7 +3,7 @@ package org.barbers.scalacolt
 import cern.colt.function.{DoubleFunction, DoubleDoubleFunction, IntIntDoubleFunction}
 import cern.colt.matrix.DoubleMatrix2D
 import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
-import cern.colt.matrix.linalg.{Algebra, Property}
+import cern.colt.matrix.linalg.{Algebra, Property, SingularValueDecomposition}
 
 import Numeric.Implicits._
 
@@ -35,7 +35,12 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   lazy val rank = if(isRectangular) {
     Matrix.algebra.rank(cMatrix)
   } else {
-    Matrix.algebra.rank(cMatT)
+    Matrix.algebra.rank(cMatrixT)
+  }
+
+  lazy val svd = {
+    val out = new SingularValueDecomposition(cMatrix)
+    (new Matrix(out.getU), new Matrix(out.getS), new Matrix(out.getV))
   }
 
   lazy val isRectangular = {
@@ -48,7 +53,7 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   }
 
   // Transpose
-  def t = new Matrix(cMatT)
+  def t = new Matrix(cMatrixT)
 
   def *[T : Numeric](c : T) = {
     val cDoub = c.toDouble
@@ -76,8 +81,12 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   }
 
   // Same as matlab backslash
-  def \(other : Matrix) = {
+  def \(other : Matrix) = if(isRectangular) {
     new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
+  } else {
+    val (v, s, u) = this.t.svd
+    val sinv = s.map{ x : Double => if(x != 0.0) 1 / x else 0.0 }
+    v * sinv * (u.t) * other
   }
 
   // Apply fn to each element
@@ -100,14 +109,14 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
 
   override def toString = cMatrix.toString
 
-  private def newCMatrix(other : Matrix, r : Int, c : Int) = {
+  private[scalacolt] def newCMatrix(other : Matrix, r : Int, c : Int) = {
     (this.cMatrix, other.cMatrix) match {
       case (a : SparseDoubleMatrix2D, b : SparseDoubleMatrix2D) => new SparseDoubleMatrix2D(r, c)
       case _ => new DenseDoubleMatrix2D(r, c)
     }
   }
 
-  private lazy val cMatT = Matrix.algebra.transpose(this.cMatrix)
+  private[scalacolt] lazy val cMatrixT = Matrix.algebra.transpose(this.cMatrix)
 }
 
 class DoubleMultiplier[T : Numeric](c : T) {
