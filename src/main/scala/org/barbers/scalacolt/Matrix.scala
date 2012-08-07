@@ -14,6 +14,8 @@ object MatrixImplicits {
   }
 
   implicit def doubleToDoubleMultiplier(c : Double) = new DoubleMultiplier(c)
+
+  implicit def doubleMatrix2DToMatrix(d : DoubleMatrix2D) = new Matrix(d)
 }
 
 object Matrix {
