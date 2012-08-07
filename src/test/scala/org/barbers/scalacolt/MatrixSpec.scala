@@ -79,13 +79,19 @@ class MatrixSpec extends Specification {
     }
   }
 
-  "A matrix vector equation" should {
+  "A matrix vector equation F * h = g" should {
     "have an exact solution if F is square" in {
       val F : Matrix = List(List(1, 2.0, 3), List(4.0, 5, 6.0), List(23.0, 8, 9.0))
       val g : Matrix = List(List(1), List(1), List(1))
       val h = F \ g
-      val res : Matrix = List(List(0), List(-1), List(1))
-      h must_== res
+      (F * h - g).sum must beCloseTo(0, 1e-3)
+    }
+
+    "use Cholesky if F is square and PSD" in {
+      val F : Matrix = List(List(3, 1.0, 0.1), List(1.0, 3, 1), List(0.1, 1, 3))
+      val g : Matrix = List(List(1), List(1), List(1))
+      val h = F \ g
+      (F * h - g).sum must beCloseTo(0, 1e-3)
     }
 
     "work if F is skinny and full rank" in {

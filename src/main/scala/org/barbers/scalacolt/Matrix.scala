@@ -3,7 +3,7 @@ package org.barbers.scalacolt
 import cern.colt.function.{DoubleFunction, DoubleDoubleFunction, IntIntDoubleFunction}
 import cern.colt.matrix.DoubleMatrix2D
 import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
-import cern.colt.matrix.linalg.{Algebra, Property, SingularValueDecomposition}
+import cern.colt.matrix.linalg.{Algebra, CholeskyDecomposition, Property, SingularValueDecomposition}
 
 import Numeric.Implicits._
 
@@ -52,6 +52,10 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
     }
   }
 
+  lazy val isSquare = Matrix.property.isSquare(this.cMatrix)
+
+  lazy val isSymmetric = Matrix.property.isSymmetric(this.cMatrix)
+
   // Transpose
   def t = new Matrix(cMatrixT)
 
@@ -81,7 +85,18 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   }
 
   // Same as matlab backslash
-  def \(other : Matrix) = if(isRectangular) {
+  // If the matrix is square and symmetric, attempt Cholesky
+  // if that fails use QR
+  // else if the matrix is rectangular, use QR decomposition
+  // else fall back to using SVD
+  def \(other : Matrix) = if(isSquare && isSymmetric) {
+    try {
+      val cd = new CholeskyDecomposition(cMatrix)
+      new Matrix(cd.solve(other.cMatrix))
+    } catch {
+      case(e : IllegalArgumentException) => new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
+    }
+  } else if(isRectangular) {
     new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
   } else {
     val (v, s, u) = this.t.svd
