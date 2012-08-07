@@ -33,6 +33,11 @@ class MatrixSpec extends Specification {
       val res : Matrix = List(List(2, 3.0, 4), List(5.0, 6, 7.0))
       H must_== res
     }
+
+    "have a correct isRectangular property" in {
+      A.isRectangular must_== false
+      D.isRectangular must_== true
+    }
   }
 
   "A scalar" should {

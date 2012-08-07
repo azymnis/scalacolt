@@ -3,7 +3,7 @@ package org.barbers.scalacolt
 import cern.colt.function.{DoubleFunction, DoubleDoubleFunction, IntIntDoubleFunction}
 import cern.colt.matrix.DoubleMatrix2D
 import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
-import cern.colt.matrix.linalg.Algebra
+import cern.colt.matrix.linalg.{Algebra, Property}
 
 import Numeric.Implicits._
 
@@ -18,6 +18,7 @@ object MatrixImplicits {
 
 object Matrix {
   private[scalacolt] def algebra = Algebra.DEFAULT
+  private[scalacolt] def property = Property.DEFAULT
 }
 class Matrix(val cMatrix : DoubleMatrix2D) {
   def rows = cMatrix.rows
@@ -28,6 +29,14 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   lazy val sum = cMatrix.zSum
   lazy val trace = Matrix.algebra.trace(cMatrix)
   lazy val rank = Matrix.algebra.rank(cMatrix)
+  lazy val isRectangular = {
+    try {
+      Matrix.property.checkRectangular(this.cMatrix)
+      true
+    } catch {
+      case(e : IllegalArgumentException) => false
+    }
+  }
 
   def *[T : Numeric](c : T) = {
     val cDoub = c.toDouble
