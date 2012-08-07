@@ -1,6 +1,6 @@
 package org.barbers.scalacolt
 
-import cern.colt.function.{DoubleDoubleFunction, IntIntDoubleFunction}
+import cern.colt.function.{DoubleFunction, DoubleDoubleFunction, IntIntDoubleFunction}
 import cern.colt.matrix.DoubleMatrix2D
 import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
 import cern.colt.matrix.linalg.Algebra
@@ -57,6 +57,14 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   // Same as matlab backslash
   def \(other : Matrix) = {
     new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
+  }
+
+  // Apply fn to each element
+  def map(fn : Double => Double) = {
+    val dFunc = new DoubleFunction {
+      def apply(arg : Double) = fn(arg)
+    }
+    new Matrix(cMatrix.copy.assign(dFunc))
   }
 
   override def equals(that : Any) = {

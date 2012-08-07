@@ -27,6 +27,12 @@ class MatrixSpec extends Specification {
     "have the right rank" in {
       B.rank must_== 2
     }
+
+    "map to plus 1" in {
+      val H = A.map{ x : Double => x + 1}
+      val res : Matrix = List(List(2, 3.0, 4), List(5.0, 6, 7.0))
+      H must_== res
+    }
   }
 
   "A scalar" should {
@@ -51,9 +57,11 @@ class MatrixSpec extends Specification {
     }
 
     "subtract" in {
+      val prev : Matrix = List(List(1, 2.0, 3), List(4.0, 5, 6.0))
       val C = A - E
       val res : Matrix = List(List(-4, -4, -4), List(3, 3, 3))
       C must_== res
+      A must_== prev
     }
   }
 
