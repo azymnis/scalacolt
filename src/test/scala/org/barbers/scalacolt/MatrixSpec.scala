@@ -23,7 +23,6 @@ class MatrixSpec extends Specification {
       A.sum must_== 21.0
     }
 
-    // TODO: check why rank fails for fat matrices
     "have the right rank" in {
       A.rank must_== 2
       B.rank must_== 2
