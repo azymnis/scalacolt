@@ -22,13 +22,22 @@ object Matrix {
 }
 class Matrix(val cMatrix : DoubleMatrix2D) {
   def rows = cMatrix.rows
+
   def columns = cMatrix.columns
+
   def toArray = cMatrix.toArray
 
   // These are expensive so make them lazy
   lazy val sum = cMatrix.zSum
+
   lazy val trace = Matrix.algebra.trace(cMatrix)
-  lazy val rank = Matrix.algebra.rank(cMatrix)
+
+  lazy val rank = if(isRectangular) {
+    Matrix.algebra.rank(cMatrix)
+  } else {
+    Matrix.algebra.rank(cMatT)
+  }
+
   lazy val isRectangular = {
     try {
       Matrix.property.checkRectangular(this.cMatrix)
@@ -37,6 +46,9 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
       case(e : IllegalArgumentException) => false
     }
   }
+
+  // Transpose
+  def t = new Matrix(cMatT)
 
   def *[T : Numeric](c : T) = {
     val cDoub = c.toDouble
@@ -83,7 +95,9 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
       false
     }
   }
+
   override def hashCode = cMatrix.hashCode
+
   override def toString = cMatrix.toString
 
   private def newCMatrix(other : Matrix, r : Int, c : Int) = {
@@ -92,6 +106,8 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
       case _ => new DenseDoubleMatrix2D(r, c)
     }
   }
+
+  private lazy val cMatT = Matrix.algebra.transpose(this.cMatrix)
 }
 
 class DoubleMultiplier[T : Numeric](c : T) {

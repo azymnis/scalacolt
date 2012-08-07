@@ -25,7 +25,10 @@ class MatrixSpec extends Specification {
 
     // TODO: check why rank fails for fat matrices
     "have the right rank" in {
+      A.rank must_== 2
       B.rank must_== 2
+      D.rank must_== 2
+      E.rank must_== 2
     }
 
     "map to plus 1" in {
