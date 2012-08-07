@@ -41,6 +41,12 @@ class MatrixSpec extends Specification {
       A.isRectangular must_== false
       D.isRectangular must_== true
     }
+
+    "have a transpose" in {
+      val At = A.t
+      val res : Matrix = List(List(1, 4), List(2, 5), List(3, 6))
+      At must_== res
+    }
   }
 
   "A scalar" should {
