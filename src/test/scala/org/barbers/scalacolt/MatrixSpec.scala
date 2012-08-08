@@ -78,6 +78,27 @@ class MatrixSpec extends Specification {
     }
   }
 
+  "Row/Column operations" should {
+    "perform dot-product" in {
+      val F : Matrix = List(List(1, 2.0, 3), List(4.0, 5, 6.0), List(23.0, 8, 9.0))
+      (F.getRow(0) * F.getCol(0)) must beCloseTo(1.0 + 2.0 * 4.0 + 3.0 * 23.0, 1e-5)
+    }
+    "perform outer-product" in {
+      val F : Matrix = List(List(1, 2.0), List(4.0, 5))
+      ((F.getCol(0) * F.getRow(0)) - List(List(1.0, 2.0), List(4.0, 8.0))).sum must beCloseTo(0.0, 1e-5)
+    }
+    "support map" in {
+      val F : Matrix = List(List(1, 2.0), List(4.0, 5))
+      (F.getRow(0).map { _ * 2 } - (F.getRow(0) + F.getRow(0))).map { x => x*x }.sum must beCloseTo(0.0, 1e-6)
+      (F.getCol(0).map { _ * 2 } - (F.getCol(0) + F.getCol(0))).map { x => x*x }.sum must beCloseTo(0.0, 1e-6)
+    }
+    "support mapReduce" in {
+      val F : Matrix = List(List(1, 2.0), List(4.0, 5))
+      F.getRow(1).mapReduce { _ * 2 } { _ * _ } must beCloseTo(80.0, 1e-5)
+      F.getCol(1).mapReduce { _ * 2 } { _ * _ } must beCloseTo(40.0, 1e-5)
+    }
+  }
+
   "A matrix vector equation F * h = g" should {
     "have an exact solution if F is square" in {
       val F : Matrix = List(List(1, 2.0, 3), List(4.0, 5, 6.0), List(23.0, 8, 9.0))

@@ -21,7 +21,23 @@ object MatrixImplicits {
 object Matrix {
   private[scalacolt] def algebra = Algebra.DEFAULT
   private[scalacolt] def property = Property.DEFAULT
+
+  // TODO: I think ".like" method can be used here...
+  private[scalacolt] def newCMatrix(am : DoubleMatrix2D, bm : DoubleMatrix2D,
+    rows : Int, cols : Int) = {
+    (am, bm) match {
+      case (a : SparseDoubleMatrix2D, b : SparseDoubleMatrix2D) => {
+         new SparseDoubleMatrix2D(rows, cols)
+      }
+      case _ => new DenseDoubleMatrix2D(rows, cols)
+    }
+  }
 }
+
+/** Immutable Matrix.
+ * TODO make mutable namespace for inplace modification which will likely
+ * be needed for some algorithms at the edge of memory utilization
+ */
 class Matrix(val cMatrix : DoubleMatrix2D) {
   def rows = cMatrix.rows
 
@@ -30,6 +46,8 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   def toArray = cMatrix.toArray
 
   // These are expensive so make them lazy
+  lazy val det = Matrix.algebra.det(cMatrix)
+
   lazy val sum = cMatrix.zSum
 
   lazy val trace = Matrix.algebra.trace(cMatrix)
@@ -70,10 +88,13 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
     new Matrix(newMat)
   }
 
-  def *(other : Matrix) = {
-    val out = newCMatrix(other, this.rows, other.columns)
+  def *(other : Matrix) : Matrix = {
+    val out = Matrix.newCMatrix(this.cMatrix, other.cMatrix, this.rows, other.columns)
     this.cMatrix.zMult(other.cMatrix, out)
     new Matrix(out)
+  }
+  def *(col : ColVector) : ColVector = {
+    new ColVector(Matrix.algebra.mult(cMatrix, col.vect))
   }
 
   def +(other : Matrix) = {
@@ -103,8 +124,12 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   } else {
     val (v, s, u) = this.t.svd
     val sinv = s.map{ x : Double => if(x != 0.0) 1 / x else 0.0 }
+    // TODO: probably want to be careful where we put the parens here, right?
     v * sinv * (u.t) * other
   }
+
+  def ^(power : Int) : Matrix =
+    new Matrix(Matrix.algebra.pow(cMatrix, power))
 
   // Apply fn to each element
   def map(fn : Double => Double) = {
@@ -122,22 +147,22 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
     }
   }
 
+  def getCol(col : Int) : ColVector = new ColVector(cMatrix.viewColumn(col))
+  def getRow(row : Int) : RowVector = new RowVector(cMatrix.viewRow(row))
+
   override def hashCode = cMatrix.hashCode
 
   override def toString = cMatrix.toString
 
-  private[scalacolt] def newCMatrix(other : Matrix, r : Int, c : Int) = {
-    (this.cMatrix, other.cMatrix) match {
-      case (a : SparseDoubleMatrix2D, b : SparseDoubleMatrix2D) => new SparseDoubleMatrix2D(r, c)
-      case _ => new DenseDoubleMatrix2D(r, c)
-    }
-  }
 
-  private[scalacolt] lazy val cMatrixT = Matrix.algebra.transpose(this.cMatrix)
+  // Since this matrix is immutable a view is fine:
+  private[scalacolt] lazy val cMatrixT = this.cMatrix.viewDice
 }
 
 class DoubleMultiplier[T : Numeric](c : T) {
   def *(m : Matrix) = m * c
+  def *(col : ColVector) = col * c
+  def *(row : RowVector) = row * c
 }
 
 class MatrixAddition extends DoubleDoubleFunction {
