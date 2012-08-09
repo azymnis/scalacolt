@@ -7,17 +7,6 @@ import cern.colt.matrix.linalg.{Algebra, CholeskyDecomposition, Property, Singul
 
 import Numeric.Implicits._
 
-object MatrixImplicits {
-  implicit def iterIterToMatrix[T : Numeric](it : Iterable[Iterable[T]]) = {
-    val ar = it.map{ _.map{el => el.toDouble}.toArray }.toArray
-    new Matrix(new DenseDoubleMatrix2D(ar))
-  }
-
-  implicit def doubleToDoubleMultiplier(c : Double) = new DoubleMultiplier(c)
-
-  implicit def doubleMatrix2DToMatrix(d : DoubleMatrix2D) = new Matrix(d)
-}
-
 object Matrix {
   private[scalacolt] def algebra = Algebra.DEFAULT
   private[scalacolt] def property = Property.DEFAULT
@@ -94,16 +83,16 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
     new Matrix(out)
   }
   def *(col : ColVector) : ColVector = {
-    new ColVector(Matrix.algebra.mult(cMatrix, col.vect))
+    new ColVector(Matrix.algebra.mult(cMatrix, col.getVect))
   }
 
   def +(other : Matrix) = {
-    val out = this.cMatrix.copy.assign(other.cMatrix, new MatrixAddition)
+    val out = this.cMatrix.copy.assign(other.cMatrix, MatrixAddition)
     new Matrix(out)
   }
 
   def -(other : Matrix) = {
-    val out = this.cMatrix.copy.assign(other.cMatrix, new MatrixSubtraction)
+    val out = this.cMatrix.copy.assign(other.cMatrix, MatrixSubtraction)
     new Matrix(out)
   }
 
@@ -165,10 +154,3 @@ class DoubleMultiplier[T : Numeric](c : T) {
   def *(row : RowVector) = row * c
 }
 
-class MatrixAddition extends DoubleDoubleFunction {
-  def apply(x : Double, y : Double) = x + y
-}
-
-class MatrixSubtraction extends DoubleDoubleFunction {
-  def apply(x : Double, y : Double) = x - y
-}
