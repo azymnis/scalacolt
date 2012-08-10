@@ -11,3 +11,9 @@ object MatrixAddition extends DoubleDoubleFunction {
 object MatrixSubtraction extends DoubleDoubleFunction {
   def apply(x : Double, y : Double) = x - y
 }
+
+class MappedDoubleDouble(xfn : (Double) => Double, yfn : (Double) => Double,
+  ddfn : DoubleDoubleFunction)
+  extends DoubleDoubleFunction {
+  def apply(x : Double, y : Double) = ddfn.apply(xfn(x),yfn(y))
+}
