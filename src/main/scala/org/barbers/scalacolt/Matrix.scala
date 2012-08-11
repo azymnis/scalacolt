@@ -8,6 +8,25 @@ import cern.colt.matrix.linalg.{Algebra, CholeskyDecomposition, Property, Singul
 import Numeric.Implicits._
 
 object Matrix {
+
+  def eye(n : Int) = {
+    val cMat = new DenseDoubleMatrix2D(n, n)
+    createEye(n, cMat)
+  }
+
+  def speye(n : Int) = {
+    val cMat = new SparseDoubleMatrix2D(n, n)
+    createEye(n, cMat)
+  }
+
+  def zeros(n : Int, m : Int) = new Matrix(new DenseDoubleMatrix2D(n, m))
+  def sparse(n : Int, m : Int) = new Matrix(new SparseDoubleMatrix2D(n, m))
+
+  private[scalacolt] def createEye(n : Int, cMat : DoubleMatrix2D) = {
+    (0 until n).foreach { i => cMat.setQuick(i, i, 1.0) }
+    new Matrix(cMat)
+  }
+
   private[scalacolt] def algebra = Algebra.DEFAULT
   private[scalacolt] def property = Property.DEFAULT
 
@@ -142,7 +161,6 @@ class Matrix(val cMatrix : DoubleMatrix2D) {
   override def hashCode = cMatrix.hashCode
 
   override def toString = cMatrix.toString
-
 
   // Since this matrix is immutable a view is fine:
   private[scalacolt] lazy val cMatrixT = this.cMatrix.viewDice

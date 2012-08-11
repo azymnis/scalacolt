@@ -49,6 +49,28 @@ class MatrixSpec extends Specification {
     }
   }
 
+  "Matrix factory methods" should {
+    "produce dense eye" in {
+      val I = Matrix.eye(3)
+      val res : Matrix = List(List(1, 0, 0), List(0, 1, 0), List(0, 0, 1))
+      I must_== res
+    }
+
+    "produce sparse eye" in {
+      val I = Matrix.speye(3)
+      val res : Matrix = List(List(1, 0, 0), List(0, 1, 0), List(0, 0, 1))
+      I must_== res
+    }
+
+    "produce zeros" in {
+      val O = Matrix.zeros(2, 2)
+      val O2 = Matrix.sparse(2, 2)
+      val res : Matrix = List(List(0, 0), List(0, 0))
+      O must_== res
+      O2 must_== res
+    }
+  }
+
   "A scalar" should {
     "implicitly be able to scale a Matrix" in {
       val C = 2 * A
