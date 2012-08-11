@@ -2,8 +2,9 @@ package org.barbers.scalacolt
 
 import org.specs2.mutable._
 
+import Implicits._
+
 class MatrixSpec extends Specification {
-  import MatrixImplicits._
   val A : Matrix = List(List(1, 2.0, 3), List(4.0, 5, 6.0))
   val B : Matrix = List(List(1.0, 2.0, 3), List(4.0, 5.0, 6), List(7.0, 8, 9.0))
   val D : Matrix = List(List(1, 2), List(3, 4), List(5, 6))
@@ -92,10 +93,15 @@ class MatrixSpec extends Specification {
       (F.getRow(0).map { _ * 2 } - (F.getRow(0) + F.getRow(0))).map { x => x*x }.sum must beCloseTo(0.0, 1e-6)
       (F.getCol(0).map { _ * 2 } - (F.getCol(0) + F.getCol(0))).map { x => x*x }.sum must beCloseTo(0.0, 1e-6)
     }
-    "support mapReduce" in {
+    "Correctly add mapped vectors" in {
       val F : Matrix = List(List(1, 2.0), List(4.0, 5))
-      F.getRow(1).mapReduce { _ * 2 } { _ * _ } must beCloseTo(80.0, 1e-5)
-      F.getCol(1).mapReduce { _ * 2 } { _ * _ } must beCloseTo(40.0, 1e-5)
+      ((F.getRow(0).map { _ * 2 } + F.getRow(0).map { _ * 3}) -
+        F.getRow(0).map { _ * 5 }).sum must beCloseTo(0.0, 1e-6)
+    }
+    "support Map/Reduce" in {
+      val F : Matrix = List(List(1, 2.0), List(4.0, 5))
+      F.getRow(1).map { _ * 2 }.reduce { _ * _ } must beCloseTo(80.0, 1e-5)
+      F.getCol(1).map { _ * 2 }.reduce { _ * _ } must beCloseTo(40.0, 1e-5)
     }
   }
 
