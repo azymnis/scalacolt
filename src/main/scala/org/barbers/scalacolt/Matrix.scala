@@ -125,13 +125,8 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
     new ColVector(Matrix.algebra.mult(cMatrix, col.vector))
   }
 
-  def +(other : Matrix) = {
-    new Matrix(cMatrix.copy.assign(other.cMatrix, MatrixAddition))
-  }
-
-  def -(other : Matrix) = {
-    new Matrix(cMatrix.copy.assign(other.cMatrix, MatrixSubtraction))
-  }
+  def +(other : Matrix) = zipMap(other) { _ + _ }
+  def -(other : Matrix) = zipMap(other) { _ - _ }
 
   // Same as matlab backslash
   // If the matrix is square and symmetric, attempt Cholesky
@@ -181,6 +176,12 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   override lazy val hashCode = cMatrix.hashCode
 
   override def toString = cMatrix.toString
+  // zip two matrices together, and for each pair (Double,Double) map to a Double
+  def zipMap(other : Matrix)(fn : (Double,Double) => Double) = {
+    val opfn = new MappedDoubleDouble(mapfn.getOrElse(identity _),
+      other.mapfn.getOrElse(identity _), fn)
+    new Matrix(getMat.copy.assign(other.getMat, opfn))
+  }
 }
 
 class DoubleMultiplier[T : Numeric](c : T) {
