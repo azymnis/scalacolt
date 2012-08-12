@@ -17,7 +17,7 @@ class RowVector(vect : => DoubleMatrix1D, val mapfn : Option[(Double) => Double]
   def t : ColVector = new ColVector(getVect, mapfn)
   def *(that : Matrix) : RowVector = {
     // v * A = (A^t * v^t)^t, but for 1D vectors there is no tranpose
-    new RowVector(Matrix.algebra.mult(that.cMatrixT, vector))
+    new RowVector(Matrix.algebra.mult(that.cMatrix.viewDice, vector))
   }
   // This forces evaluation since Double can't be lazy
   def *(that : ColVector) : Double = Matrix.algebra.mult(vector, that.vector)
