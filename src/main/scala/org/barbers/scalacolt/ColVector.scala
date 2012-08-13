@@ -16,14 +16,19 @@ object ColVector {
   // Make a sparse matrix, optionally give the max index, otherwise taken to be the max in the
   // iterable
   def sparse[T : Numeric](items : Iterable[(Int,T)], size : Int = -1) = {
-    val itemMax = items.map { _._1 }.max
-    assert(size == -1 || (size > itemMax), "size < itemMax: " + size + " < " + itemMax)
-    val sd1d = new SparseDoubleMatrix1D(if(size < 0) (itemMax+1) else size)
-    val numT = implicitly[Numeric[T]]
-    items.foreach { idxV =>
-      sd1d.setQuick(idxV._1, numT.toDouble(idxV._2))
+    if(items.isEmpty) {
+      new ColVector(new SparseDoubleMatrix1D(size max 0))
     }
-    new ColVector(sd1d)
+    else {
+      val itemMax = items.map { _._1 }.max
+      assert(size == -1 || (size > itemMax), "size < itemMax: " + size + " < " + itemMax)
+      val sd1d = new SparseDoubleMatrix1D(if(size < 0) (itemMax+1) else size)
+      val numT = implicitly[Numeric[T]]
+      items.foreach { idxV =>
+        sd1d.setQuick(idxV._1, numT.toDouble(idxV._2))
+      }
+      new ColVector(sd1d)
+    }
   }
 }
 
