@@ -13,6 +13,28 @@ import Implicits.func2ToColt
 
 object Matrix {
 
+  def apply[T : Numeric](it : Iterable[Iterable[T]]) = {
+    val num = implicitly[Numeric[T]]
+    val ar = it.map{ _.map{el => num.toDouble(el)}.toArray }.toArray
+    new Matrix(new DenseDoubleMatrix2D(ar))
+  }
+
+  // Use this to convert a Map[(Int,Int),T] to a sparse matrix
+  def sparse[T : Numeric](items : Iterable[((Int,Int),T)], rows : Int = -1, cols : Int = -1) = {
+    val (rowMax, colMax) = items.foldLeft((-1,-1)) { (rowCol, riciv) =>
+      (rowCol._1 max riciv._1._1, rowCol._2 max riciv._1._2)
+    }
+    assert(rows == -1 || rows > rowMax, "rows <= rowMax: " + rows + " <= " + rowMax)
+    assert(cols == -1 || cols > colMax, "cols <= colMax: " + cols + " <= " + colMax)
+    val sd2d = new SparseDoubleMatrix2D(if(rows < 0) (rowMax+1) else rows,
+        if(cols < 0) (colMax+1) else cols)
+    val numT = implicitly[Numeric[T]]
+    items.foreach { rcV =>
+      sd2d.setQuick(rcV._1._1, rcV._1._2, numT.toDouble(rcV._2))
+    }
+    new Matrix(sd2d)
+  }
+
   def eye(n : Int) = {
     val cMat = new DenseDoubleMatrix2D(n, n)
     createEye(n, cMat)
@@ -67,6 +89,15 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
 
   // These are expensive so make them lazy
   lazy val det = Matrix.algebra.det(cMatrix)
+
+  // L1 Norm (max abs(sum(col)))
+  lazy val norm1 = Matrix.algebra.norm1(cMatrix)
+  // L2 Norm, does SVD, max singular value
+  lazy val norm2 = Matrix.algebra.norm2(cMatrix)
+  // Frobenius Norm = (M * M.t).trace
+  lazy val normF = Matrix.algebra.normF(cMatrix)
+  // This is the max abs(sum(row))
+  lazy val normInf = Matrix.algebra.normInfinity(cMatrix)
 
   lazy val sum = {
     if(mapfn.isEmpty)

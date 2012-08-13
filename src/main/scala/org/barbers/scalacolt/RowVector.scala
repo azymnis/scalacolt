@@ -6,6 +6,13 @@ import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
 
 import Implicits._
 
+object RowVector {
+  def apply[T : Numeric](items : Iterable[T]) = ColVector(items).t
+  // Make a sparse matrix, optionally give the max index, otherwise taken to be the max in the
+  // iterable, this can't be iterable, otherwise it has the same signature as above
+  def sparse[T : Numeric](items : Map[Int,T], maxIdx : Int = -1) = ColVector.sparse(items, maxIdx).t
+}
+
 /** Immutable Lazy RowVector
  */
 class RowVector(vect : => DoubleMatrix1D, val mapfn : Option[(Double) => Double] = None)

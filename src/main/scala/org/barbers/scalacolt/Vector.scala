@@ -16,6 +16,14 @@ trait Vector[VecT <: Vector[VecT]] {
       .getOrElse(getVect)
   }
 
+  // We calculate the norms here to avoid materializing a new copy (don't touch vector)
+  // \sum |x_i|
+  lazy val norm1 = map { xi => scala.math.abs(xi) }.sum
+  // \sum x_i^2
+  lazy val norm2 = map { xi => xi*xi }.sum
+  // max_i |x_i|
+  lazy val normInf = map { xi => scala.math.abs(xi) }.reduce { _ max _ }
+
   lazy val sum = {
     if(mapfn.isEmpty)
       getVect.zSum
