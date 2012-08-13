@@ -4,6 +4,7 @@ import cern.colt.function.{DoubleFunction, DoubleDoubleFunction, IntIntDoubleFun
 import cern.colt.matrix.DoubleMatrix2D
 import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
 import cern.colt.matrix.linalg.{Algebra, CholeskyDecomposition, Property, SingularValueDecomposition}
+import cern.colt.matrix.DoubleFactory2D.{dense => dense2D, sparse => sparse2D}
 
 import Numeric.Implicits._
 
@@ -33,6 +34,32 @@ object Matrix {
       sd2d.setQuick(rcV._1._1, rcV._1._2, numT.toDouble(rcV._2))
     }
     new Matrix(sd2d)
+  }
+
+  /** Creates the ((n-1) x n) difference matrix:
+   * [-1  1  0   ... ]
+   * [ 0 -1  1 0   ..]
+   * [ 0  0 -1 1 0 ..]
+   * hit a column vector with this and x' = d1 x then x'[t] = x[t+1] - x[t]
+   */
+  def d1(n : Int) = {
+    val zn = sparse(n-1,1)
+    val thisI = speye(n-1)
+    ((thisI * (-1)).appendCols(zn)) + (zn.appendCols(thisI))
+  }
+  /** Creates the ((n-2) x n) second difference matrix:
+   * [ 1 -2  1  0        ... ]
+   * [ 0  1 -2  1  0  0    ..]
+   * [ 0  0  0  1 -2  1  0 ..]
+   * hit a col vector with this, and get the second diff: x'[t] = x[t+2] - 2 x[t] + x[t]
+   * Note d1(n-1) * d1(n) == d2(n)
+   */
+  def d2(n : Int) = {
+    val zn = sparse(n-2,1)
+    val thisI = speye(n-2)
+    (thisI).appendCols(zn, zn) +
+      zn.appendCols(thisI * (-2.0), zn) +
+      zn.appendCols(zn, thisI)
   }
 
   def eye(n : Int) = {
@@ -66,13 +93,24 @@ object Matrix {
       case _ => new DenseDoubleMatrix2D(rows, cols)
     }
   }
+  // Stack matrices vertically, same as Matrix.appendRows
+  // Named for the numpy function
+  def vstack(allMats : Matrix*) : Matrix = {
+    val factory = if(allMats.forall { _.isSparse }) sparse2D else dense2D
+    new Matrix(factory.compose(allMats.map { mat => Array(mat.cMatrix) }.toArray))
+  }
+  def hstack(allMats : Matrix*) : Matrix = {
+    val factory = if(allMats.forall { _.isSparse }) sparse2D else dense2D
+    new Matrix(factory.compose(Array(allMats.map { _.cMatrix }.toArray)))
+  }
 }
 
 /** Immutable Matrix.
  * TODO make mutable namespace for inplace modification which will likely
  * be needed for some algorithms at the edge of memory utilization
  */
-class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = None) {
+class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = None)
+  extends Function2[Int,Int,Double] {
   // call-by-name is executed each time, we don't want to do that, so access here:
   private[scalacolt] lazy val getMat = mat
 
@@ -82,6 +120,9 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   }
 
   def rows = getMat.rows
+  // Append the given matrices rows beneath this matrix, must have the same number of cols
+  def appendRows(that : Matrix*) : Matrix = Matrix.vstack((List(this) ++ that) : _*)
+  def appendCols(that : Matrix*) : Matrix = Matrix.hstack((List(this) ++ that) : _*)
 
   def columns = getMat.columns
 
@@ -121,6 +162,8 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
     (new Matrix(out.getU), new Matrix(out.getS), new Matrix(out.getV))
   }
 
+  lazy val isSparse : Boolean = getMat.isInstanceOf[SparseDoubleMatrix2D]
+
   lazy val isRectangular = {
     try {
       Matrix.property.checkRectangular(getMat)
@@ -138,6 +181,10 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
 
   // Transpose
   lazy val t = new Matrix(getMat.viewDice, mapfn)
+
+  override def apply(row : Int, col : Int) : Double = {
+    mapfn.map { fn => fn(getMat.get(row, col)) }.getOrElse { getMat.get(row, col) }
+  }
 
   def *[T : Numeric](c : T) = {
     val dc = implicitly[Numeric[T]].toDouble(c)
@@ -188,12 +235,12 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   // Apply fn to each element
   def map(fn : Double => Double) = {
     val newMap = mapfn.map { _.andThen(fn) }.orElse(Some(fn))
-    new Matrix(mat, newMap)
+    new Matrix(getMat, newMap)
   }
 
   override def equals(that : Any) = {
     (that != null) && (that.isInstanceOf[Matrix]) &&
-      (cMatrix == that.asInstanceOf[Matrix].cMatrix)
+      Matrix.property.equals(cMatrix, that.asInstanceOf[Matrix].cMatrix)
   }
 
   def getCol(col : Int) : ColVector = new ColVector(cMatrix.viewColumn(col))

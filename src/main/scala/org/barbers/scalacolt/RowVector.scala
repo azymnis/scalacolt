@@ -21,6 +21,9 @@ class RowVector(vect : => DoubleMatrix1D, val mapfn : Option[(Double) => Double]
   // vect would be evaluated EVERY time we touch vect
   private[scalacolt] lazy val getVect = vect
 
+  def columns = size
+  def rows = 1
+
   def t : ColVector = new ColVector(getVect, mapfn)
   def *(that : Matrix) : RowVector = {
     // v * A = (A^t * v^t)^t, but for 1D vectors there is no tranpose
@@ -38,7 +41,7 @@ class RowVector(vect : => DoubleMatrix1D, val mapfn : Option[(Double) => Double]
 
   override def equals(that : Any) : Boolean = {
     (that != null) && that.isInstanceOf[RowVector] && {
-      vector.equals(that.asInstanceOf[RowVector].vector)
+      Matrix.property.equals(vector, that.asInstanceOf[RowVector].vector)
     }
   }
   override def map(nextmapfn : (Double) => Double) = {

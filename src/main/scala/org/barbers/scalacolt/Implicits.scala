@@ -12,6 +12,7 @@ import cern.colt.matrix.DoubleMatrix2D
  */
 object Implicits {
   implicit def toMatrix[T : Numeric](it : Iterable[Iterable[T]]) = Matrix(it)
+  implicit def vectToMatrix[VecT <: Vector[VecT]](v : Vector[VecT]) : Matrix = v.toMatrix
 
   implicit def funcToColt(fn : (Double) => Double) : DoubleFunction = {
     new DoubleFunction { override def apply(x : Double) = fn(x) }
@@ -23,7 +24,9 @@ object Implicits {
   implicit def coltToFunc2(fn : DoubleDoubleFunction) : (Double,Double) => Double = {
     (x : Double, y : Double) => fn.apply(x,y)
   }
+  implicit def iFnIU2Proc(fn : (Int) => Unit) = new ScalaIntUnitProcedure(fn)
+  implicit def iFnIB2Proc(fn : (Int) => Boolean) = new ScalaIntProcedure(fn)
 
-  implicit def doubleToDoubleMultiplier(c : Double) = new DoubleMultiplier(c)
+  implicit def doubleToDoubleMultiplier[T : Numeric](c : T) = new DoubleMultiplier(c)
   implicit def doubleMatrix2DToMatrix(d : DoubleMatrix2D) = new Matrix(d)
 }

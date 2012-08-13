@@ -21,6 +21,7 @@ class MatrixSpec extends Specification {
       m1.cMatrix.get(1,2) must beCloseTo(4, 1e-5)
 
       val m2 = Matrix.sparse(Map((0,1) -> 1, (0,2) -> 2, (1,0) -> 2, (1,1) -> 3, (1,2) -> 4))
+      m2.isSparse must beTrue
       (m2 - m1).normF must beCloseTo(0, 1e-5)
       (m2 - m1).norm1 must beCloseTo(0, 1e-5)
       (m2 - m1).normInf must beCloseTo(0, 1e-5)
@@ -64,14 +65,21 @@ class MatrixSpec extends Specification {
   }
 
   "Matrix factory methods" should {
+    "produce d1/d2 matrices" in {
+      (20 to 30).foreach { n =>
+        Matrix.d1(n-1) * Matrix.d1(n) must be_==(Matrix.d2(n))
+      }
+    }
     "produce dense eye" in {
       val I = Matrix.eye(3)
+      I.isSparse must beFalse
       val res : Matrix = List(List(1, 0, 0), List(0, 1, 0), List(0, 0, 1))
       I must_== res
     }
 
     "produce sparse eye" in {
       val I = Matrix.speye(3)
+      I.isSparse must beTrue
       val res : Matrix = List(List(1, 0, 0), List(0, 1, 0), List(0, 0, 1))
       I must_== res
     }
@@ -79,9 +87,25 @@ class MatrixSpec extends Specification {
     "produce zeros" in {
       val O = Matrix.zeros(2, 2)
       val O2 = Matrix.sparse(2, 2)
+      O2.isSparse must beTrue
       val res : Matrix = List(List(0, 0), List(0, 0))
       O must_== res
       O2 must_== res
+    }
+    "allow stacking" in {
+      val sigmax = Matrix.sparse(Map((0,1) -> 1, (1,0) -> 1))
+      val sigmaz = Matrix.sparse(Map((0,0) -> 1, (1,1) -> -1))
+      val vstacked = Matrix.sparse(Map((0,1) -> 1, (1,0) -> 1, (2,0) -> 1, (3,1) -> -1))
+      val m1 = Matrix.vstack(sigmax, sigmaz)
+      val m2 = sigmax.appendRows(sigmaz)
+      (m1 - m2).normF must beCloseTo(0.0, 1e-6)
+      (m1 - vstacked).normF must beCloseTo(0.0, 1e-6)
+
+      val m3 = Matrix.hstack(sigmax, sigmaz)
+      val m4 = sigmax.appendCols(sigmaz)
+      val hstacked = Matrix.sparse(Map((0,1) -> 1, (1,0) -> 1, (0,2) -> 1, (1,3) -> -1))
+      (m3 - m4).normF must beCloseTo(0.0, 1e-6)
+      (m3 - hstacked).normF must beCloseTo(0.0, 1e-6)
     }
   }
 
@@ -119,12 +143,16 @@ class MatrixSpec extends Specification {
     "be constructable from iterables" in {
       val listIn = List(0,0,1,0,1)
       val r1 = RowVector(listIn)
+      r1.isSparse must beFalse
       val r2 = RowVector.sparse(Map(2 -> 1, 4 -> 1))
+      r2.isSparse must beTrue
       (r1 - r2).norm2 must beCloseTo(0, 1e-6)
       listIn.zipWithIndex.foreach { vidx => r1.vector.get(vidx._2) must beCloseTo(vidx._1, 1e-5) }
 
       val c1 = ColVector(listIn)
+      c1.isSparse must beFalse
       val c2 = ColVector.sparse(Map(2 -> 1, 4 -> 1))
+      c2.isSparse must beTrue
       (c1 - c2).norm2 must beCloseTo(0, 1e-6)
       listIn.zipWithIndex.foreach { vidx => c1.vector.get(vidx._2) must beCloseTo(vidx._1, 1e-5) }
 

@@ -3,11 +3,14 @@ package org.barbers.scalacolt
 import cern.colt.matrix.DoubleMatrix1D
 import cern.colt.function.{DoubleFunction, DoubleDoubleFunction, IntIntDoubleFunction}
 import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
+import cern.colt.matrix.impl.{DenseDoubleMatrix1D, SparseDoubleMatrix1D}
+
+import cern.colt.list.{IntArrayList, DoubleArrayList}
 
 import Implicits.funcToColt
 import Implicits.func2ToColt
 
-trait Vector[VecT <: Vector[VecT]] {
+trait Vector[VecT <: Vector[VecT]] extends Function1[Int,Double] {
   val mapfn : Option[(Double) => Double]
   private[scalacolt] val getVect : DoubleMatrix1D
 
@@ -31,9 +34,45 @@ trait Vector[VecT <: Vector[VecT]] {
       reduce { _ + _ }
   }
 
+  lazy val isSparse : Boolean = getVect.isInstanceOf[SparseDoubleMatrix1D]
+  lazy val isZero : Boolean = Matrix.property.equals(vector, 0.0)
+
   def *[N : Numeric](that : N) : VecT = {
     val dN = implicitly[Numeric[N]].toDouble(that)
     map { _ * dN }
+  }
+
+  def columns : Int
+  def rows : Int
+
+  def toArray : Array[Double] = vector.toArray
+  def nonZeros : Iterator[(Int,Double)] = {
+    if(isSparse) {
+      val ilist = new IntArrayList
+      val dlist = new DoubleArrayList
+      vector.getNonZeros(ilist, dlist)
+      (0 until ilist.size)
+        .iterator
+        .map { idx => (ilist.get(idx), dlist.get(idx)) }
+    }
+    else {
+      (0 until (columns max rows))
+        .iterator
+        .map { idx => (idx, vector.getQuick(idx)) }
+        .filter { idxV => scala.math.abs(idxV._2) > Matrix.property.tolerance }
+    }
+  }
+  def toMatrix : Matrix = {
+    val emptyMat = getVect.like2D(rows, columns)
+    if( columns > 1 ) {
+      // must be a column vector
+      nonZeros.foreach { idxV => emptyMat.setQuick(0, idxV._1, idxV._2) }
+    }
+    else {
+      //Rows *may* be bigger than one
+      nonZeros.foreach { idxV => emptyMat.setQuick(idxV._1, 0, idxV._2) }
+    }
+    new Matrix(emptyMat)
   }
 
   def map(fn : (Double) => Double) : VecT
@@ -47,7 +86,7 @@ trait Vector[VecT <: Vector[VecT]] {
   }
 
   // This forces evaluation
-  def apply(idx : Int) : Double = mapfn.map { fn => fn(getVect.get(idx)) }.getOrElse { getVect.get(idx) }
+  override def apply(idx : Int) : Double = mapfn.map { fn => fn(getVect.get(idx)) }.getOrElse { getVect.get(idx) }
   def size = getVect.size
   override def toString = getVect.toString
 }
