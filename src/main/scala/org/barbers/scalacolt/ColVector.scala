@@ -35,6 +35,9 @@ class ColVector(vect : => DoubleMatrix1D, val mapfn : Option[(Double) => Double]
   // vect would be evaluated EVERY time we touch vect
   private[scalacolt] lazy val getVect = vect
 
+  def columns = 1
+  def rows = size
+
   def t : RowVector = new RowVector(getVect, mapfn)
   // TODO, we should make Matrix lazy and avoid realizing it if we are going to use
   // this in a product next
@@ -44,6 +47,7 @@ class ColVector(vect : => DoubleMatrix1D, val mapfn : Option[(Double) => Double]
     Matrix.algebra.multOuter(vector, that.vector, out)
     new Matrix(out)
   }
+
   override def zipMap(other : ColVector)(op : (Double,Double) => Double) : ColVector = {
     val opfn = new MappedDoubleDouble(mapfn.getOrElse(identity _),
       other.mapfn.getOrElse(identity _), op)
@@ -53,7 +57,7 @@ class ColVector(vect : => DoubleMatrix1D, val mapfn : Option[(Double) => Double]
 
   override def equals(that : Any) : Boolean = {
     (that != null) && that.isInstanceOf[ColVector] && {
-      vector.equals(that.asInstanceOf[ColVector].vector)
+      Matrix.property.equals(vector, that.asInstanceOf[ColVector].vector)
     }
   }
 
