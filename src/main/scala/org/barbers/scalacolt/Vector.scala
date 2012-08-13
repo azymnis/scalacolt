@@ -29,9 +29,9 @@ trait Vector[VecT <: Vector[VecT]] {
   }
 
   def map(fn : (Double) => Double) : VecT
-  def mergeOp(op : DoubleDoubleFunction, other : VecT) : VecT
-  def +(other : VecT) = mergeOp(MatrixAddition, other)
-  def -(other : VecT) = mergeOp(MatrixSubtraction, other)
+  def zipMap(other : VecT)(fn : (Double,Double) => Double) : VecT
+  def +(other : VecT) = zipMap(other) { _ + _ }
+  def -(other : VecT) = zipMap(other) { _ - _ }
 
   def reduce(reduce : (Double,Double) => Double) : Double = {
     val thismapfn : DoubleFunction = mapfn.map { funcToColt _ }.getOrElse(IdentityFunc)

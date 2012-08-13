@@ -23,7 +23,7 @@ class ColVector(vect : => DoubleMatrix1D, val mapfn : Option[(Double) => Double]
     Matrix.algebra.multOuter(vector, that.vector, out)
     new Matrix(out)
   }
-  override def mergeOp(op : DoubleDoubleFunction, other : ColVector) : ColVector = {
+  override def zipMap(other : ColVector)(op : (Double,Double) => Double) : ColVector = {
     val opfn = new MappedDoubleDouble(mapfn.getOrElse(identity _),
       other.mapfn.getOrElse(identity _), op)
     // This still doesn't evaluate it, but is lazy:

@@ -22,7 +22,7 @@ class RowVector(vect : => DoubleMatrix1D, val mapfn : Option[(Double) => Double]
   // This forces evaluation since Double can't be lazy
   def *(that : ColVector) : Double = Matrix.algebra.mult(vector, that.vector)
 
-  override def mergeOp(op : DoubleDoubleFunction, other : RowVector) : RowVector = {
+  override def zipMap(other : RowVector)(op : (Double,Double) => Double) : RowVector = {
     val opfn = new MappedDoubleDouble(mapfn.getOrElse(identity _),
       other.mapfn.getOrElse(identity _), op)
     // This still doesn't evaluate it, but is lazy:
