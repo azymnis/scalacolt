@@ -11,11 +11,7 @@ import cern.colt.matrix.DoubleMatrix2D
  * cost wrapper once the jit gets ahold of it.
  */
 object Implicits {
-  implicit def toMatrix[T : Numeric](it : Iterable[Iterable[T]]) = {
-    val num = implicitly[Numeric[T]]
-    val ar = it.map{ _.map{el => num.toDouble(el)}.toArray }.toArray
-    new Matrix(new DenseDoubleMatrix2D(ar))
-  }
+  implicit def toMatrix[T : Numeric](it : Iterable[Iterable[T]]) = Matrix(it)
 
   implicit def funcToColt(fn : (Double) => Double) : DoubleFunction = {
     new DoubleFunction { override def apply(x : Double) = fn(x) }

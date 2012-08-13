@@ -11,6 +11,20 @@ class MatrixSpec extends Specification {
   val E : Matrix = List(List(5, 6, 7), List(1, 2, 3))
 
   "A Matrix" should {
+    "be constructable from iterables" in {
+      val m1 = Matrix(List(List(0,1,2),List(2,3,4)))
+      m1.cMatrix.get(0,0) must beCloseTo(0, 1e-5)
+      m1.cMatrix.get(0,1) must beCloseTo(1, 1e-5)
+      m1.cMatrix.get(0,2) must beCloseTo(2, 1e-5)
+      m1.cMatrix.get(1,0) must beCloseTo(2, 1e-5)
+      m1.cMatrix.get(1,1) must beCloseTo(3, 1e-5)
+      m1.cMatrix.get(1,2) must beCloseTo(4, 1e-5)
+
+      val m2 = Matrix.sparse(Map((0,1) -> 1, (0,2) -> 2, (1,0) -> 2, (1,1) -> 3, (1,2) -> 4))
+      (m2 - m1).normF must beCloseTo(0, 1e-5)
+      (m2 - m1).norm1 must beCloseTo(0, 1e-5)
+      (m2 - m1).normInf must beCloseTo(0, 1e-5)
+    }
     "have the right rows and columns" in {
       A.rows must_== 2
       A.columns must_== 3
@@ -102,18 +116,43 @@ class MatrixSpec extends Specification {
   }
 
   "Row/Column operations" should {
+    "be constructable from iterables" in {
+      val listIn = List(0,0,1,0,1)
+      val r1 = RowVector(listIn)
+      val r2 = RowVector.sparse(Map(2 -> 1, 4 -> 1))
+      (r1 - r2).norm2 must beCloseTo(0, 1e-6)
+      listIn.zipWithIndex.foreach { vidx => r1.vector.get(vidx._2) must beCloseTo(vidx._1, 1e-5) }
+
+      val c1 = ColVector(listIn)
+      val c2 = ColVector.sparse(Map(2 -> 1, 4 -> 1))
+      (c1 - c2).norm2 must beCloseTo(0, 1e-6)
+      listIn.zipWithIndex.foreach { vidx => c1.vector.get(vidx._2) must beCloseTo(vidx._1, 1e-5) }
+
+      (c1.t - r1).norm2 must beCloseTo(0, 1e-6)
+    }
     "perform dot-product" in {
       val F : Matrix = List(List(1, 2.0, 3), List(4.0, 5, 6.0), List(23.0, 8, 9.0))
       (F.getRow(0) * F.getCol(0)) must beCloseTo(1.0 + 2.0 * 4.0 + 3.0 * 23.0, 1e-5)
     }
     "perform outer-product" in {
       val F : Matrix = List(List(1, 2.0), List(4.0, 5))
-      ((F.getCol(0) * F.getRow(0)) - List(List(1.0, 2.0), List(4.0, 8.0))).sum must beCloseTo(0.0, 1e-5)
+      val diff = (F.getCol(0) * F.getRow(0)) - List(List(1.0, 2.0), List(4.0, 8.0))
+      diff.sum must beCloseTo(0.0, 1e-5)
+      diff.norm1 must beCloseTo(0.0, 1e-5)
+      diff.norm2 must beCloseTo(0.0, 1e-5)
+      diff.normF must beCloseTo(0.0, 1e-5)
+      diff.normInf must beCloseTo(0.0, 1e-5)
     }
     "support map" in {
       val F : Matrix = List(List(1, 2.0), List(4.0, 5))
       (F.getRow(0).map { _ * 2 } - (F.getRow(0) + F.getRow(0))).map { x => x*x }.sum must beCloseTo(0.0, 1e-6)
       (F.getCol(0).map { _ * 2 } - (F.getCol(0) + F.getCol(0))).map { x => x*x }.sum must beCloseTo(0.0, 1e-6)
+    }
+    "Have correct norms" in {
+      val row = RowVector(List(1,2,-3,4,5,6))
+      row.norm1 must beCloseTo(row.map { v => scala.math.abs(v) }.sum, 1e-6)
+      row.norm2 must beCloseTo(row.map { v => v*v }.sum, 1e-6)
+      row.normInf must beCloseTo(row.map { v => scala.math.abs(v) }.reduce { _ max _ }, 1e-6)
     }
     "Correctly add mapped vectors" in {
       val F : Matrix = List(List(1, 2.0), List(4.0, 5))

@@ -3,8 +3,29 @@ package org.barbers.scalacolt
 import cern.colt.matrix.DoubleMatrix1D
 import cern.colt.function.{DoubleFunction, DoubleDoubleFunction, IntIntDoubleFunction}
 import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
+import cern.colt.matrix.impl.{DenseDoubleMatrix1D, SparseDoubleMatrix1D}
 
 import Implicits._
+
+object ColVector {
+  def apply[T : Numeric](items : Iterable[T]) = {
+    val numT = implicitly[Numeric[T]]
+    val dd1d = new DenseDoubleMatrix1D(items.map { it => numT.toDouble(it) }.toArray)
+    new ColVector(dd1d)
+  }
+  // Make a sparse matrix, optionally give the max index, otherwise taken to be the max in the
+  // iterable
+  def sparse[T : Numeric](items : Iterable[(Int,T)], size : Int = -1) = {
+    val itemMax = items.map { _._1 }.max
+    assert(size == -1 || (size > itemMax), "size < itemMax: " + size + " < " + itemMax)
+    val sd1d = new SparseDoubleMatrix1D(if(size < 0) (itemMax+1) else size)
+    val numT = implicitly[Numeric[T]]
+    items.foreach { idxV =>
+      sd1d.setQuick(idxV._1, numT.toDouble(idxV._2))
+    }
+    new ColVector(sd1d)
+  }
+}
 
 /** Immutable Lazy ColVector
  */
