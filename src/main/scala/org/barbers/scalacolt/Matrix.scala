@@ -211,23 +211,34 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   // if that fails use QR
   // else if the matrix is rectangular, use QR decomposition
   // else fall back to using SVD
-  def \(other : Matrix) = if(isSquare && isSymmetric) {
-    try {
-      val cd = new CholeskyDecomposition(cMatrix)
-      // We need to force this now, else we won't see the exception:
-      val soln = cd.solve(other.cMatrix)
-      new Matrix(soln)
-    } catch {
-      case(e : IllegalArgumentException) => new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
+  private lazy val backop : (Matrix) => Matrix = {
+    if(isSquare && isSymmetric) {
+      try {
+        val cd = new CholeskyDecomposition(cMatrix)
+        val fn = { other : Matrix =>
+          val soln = cd.solve(other.cMatrix)
+          new Matrix(soln)
+        }
+        // Try to run the above with a zero input, which may throw:
+        fn(Matrix.sparse(columns, 1))
+        fn
+      } catch {
+        case(e : IllegalArgumentException) => { other : Matrix =>
+         new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
+        }
+      }
+    } else if(isRectangular) { other : Matrix =>
+      new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
+    } else {
+      val (v, s, u) = this.t.svd
+      val sinv = s.map{ x : Double => if(x != 0.0) 1 / x else 0.0 }
+      val prod = (v * sinv * (u.t))
+      val fn = { (other : Matrix) => prod * other }
+      fn
     }
-  } else if(isRectangular) {
-    new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
-  } else {
-    val (v, s, u) = this.t.svd
-    val sinv = s.map{ x : Double => if(x != 0.0) 1 / x else 0.0 }
-    // TODO: probably want to be careful where we put the parens here, right?
-    v * sinv * (u.t) * other
   }
+
+  def \(other : Matrix) = backop(other)
 
   def ^(power : Int) : Matrix =
     new Matrix(Matrix.algebra.pow(cMatrix, power))
