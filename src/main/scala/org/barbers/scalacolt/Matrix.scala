@@ -182,6 +182,8 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   // Transpose
   lazy val t = new Matrix(getMat.viewDice, mapfn)
 
+  private[scalacolt] lazy val cholesky = new CholeskyDecomposition(cMatrix)
+
   override def apply(row : Int, col : Int) : Double = {
     mapfn.map { fn => fn(getMat.get(row, col)) }.getOrElse { getMat.get(row, col) }
   }
@@ -213,9 +215,8 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   // else fall back to using SVD
   def \(other : Matrix) = if(isSquare && isSymmetric) {
     try {
-      val cd = new CholeskyDecomposition(cMatrix)
       // We need to force this now, else we won't see the exception:
-      val soln = cd.solve(other.cMatrix)
+      val soln = cholesky.solve(other.cMatrix)
       new Matrix(soln)
     } catch {
       case(e : IllegalArgumentException) => new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
