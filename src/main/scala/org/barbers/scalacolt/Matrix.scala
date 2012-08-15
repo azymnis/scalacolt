@@ -3,7 +3,7 @@ package org.barbers.scalacolt
 import cern.colt.function.{DoubleFunction, DoubleDoubleFunction, IntIntDoubleFunction}
 import cern.colt.matrix.DoubleMatrix2D
 import cern.colt.matrix.impl.{DenseDoubleMatrix2D, SparseDoubleMatrix2D}
-import cern.colt.matrix.linalg.{Algebra, CholeskyDecomposition, Property, SingularValueDecomposition}
+import cern.colt.matrix.linalg.{Algebra, CholeskyDecomposition, Property, SingularValueDecomposition, LUDecomposition, QRDecomposition}
 import cern.colt.matrix.DoubleFactory2D.{dense => dense2D, sparse => sparse2D}
 
 import Numeric.Implicits._
@@ -185,10 +185,14 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   // After mapping, we may be symmetric, even if we weren't originally:
   lazy val isSymmetric = Matrix.property.isSymmetric(cMatrix)
 
+  private[scalacolt] lazy val luDecomp = new LUDecomposition(cMatrix)
+  private[scalacolt] lazy val qrDecomp = new QRDecomposition(cMatrix)
+  // Cholesky appears really shitty in Colt right now, avoid it.
+  private[scalacolt] lazy val cholesky = new CholeskyDecomposition(cMatrix)
+
   // Transpose
   lazy val t = new Matrix(getMat.viewDice, mapfn)
 
-  private[scalacolt] lazy val cholesky = new CholeskyDecomposition(cMatrix)
 
   override def apply(row : Int, col : Int) : Double = {
     mapfn.map { fn => fn(getMat.get(row, col)) }.getOrElse { getMat.get(row, col) }
@@ -215,26 +219,15 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   def -(other : Matrix) = zipMap(other) { _ - _ }
 
   // Same as matlab backslash
-  // If the matrix is square and symmetric, attempt Cholesky
-  // if that fails use QR
+  // If the matrix is square and symmetric, use LU
   // else if the matrix is rectangular, use QR decomposition
   // else fall back to using SVD
   private lazy val backop : (Matrix) => Matrix = {
-    if(isSquare && isSymmetric) {
-      val cd = new CholeskyDecomposition(cMatrix)
-      if( cd.isSymmetricPositiveDefinite ) {
-        val fn = { other : Matrix =>
-          val soln = cd.solve(other.cMatrix)
-          new Matrix(soln)
-        }
-        fn
-      }
-      else {
-        val fn = { other : Matrix => new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix)) }
-        fn
-      }
-    } else if(isRectangular) { other : Matrix =>
-      new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
+    if(isSquare) {
+      { (other : Matrix) => new Matrix(luDecomp.solve(other.cMatrix)) }
+    }
+    else if(isRectangular) {
+      { (other : Matrix) => new Matrix(qrDecomp.solve(other.cMatrix)) }
     } else {
       val (v, s, u) = this.t.svd
       val sinv = s.map{ x : Double => if(x != 0.0) 1 / x else 0.0 }
