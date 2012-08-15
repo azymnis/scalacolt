@@ -75,6 +75,12 @@ object Matrix {
   def zeros(n : Int, m : Int) = new Matrix(new DenseDoubleMatrix2D(n, m))
   def sparse(n : Int, m : Int) = new Matrix(new SparseDoubleMatrix2D(n, m))
 
+  def spdiag(vec : ColVector) = {
+    val cMat = new SparseDoubleMatrix2D(vec.size, vec.size)
+    (0 until vec.size).foreach { i => cMat.setQuick(i, i, vec(i)) }
+    new Matrix(cMat)
+  }
+
   private[scalacolt] def createEye(n : Int, cMat : DoubleMatrix2D) = {
     (0 until n).foreach { i => cMat.setQuick(i, i, 1.0) }
     new Matrix(cMat)
