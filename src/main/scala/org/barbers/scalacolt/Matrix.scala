@@ -75,6 +75,12 @@ object Matrix {
   def zeros(n : Int, m : Int) = new Matrix(new DenseDoubleMatrix2D(n, m))
   def sparse(n : Int, m : Int) = new Matrix(new SparseDoubleMatrix2D(n, m))
 
+  def spdiag(vec : ColVector) = {
+    val cMat = new SparseDoubleMatrix2D(vec.size, vec.size)
+    (0 until vec.size).foreach { i => cMat.setQuick(i, i, vec(i)) }
+    new Matrix(cMat)
+  }
+
   private[scalacolt] def createEye(n : Int, cMat : DoubleMatrix2D) = {
     (0 until n).foreach { i => cMat.setQuick(i, i, 1.0) }
     new Matrix(cMat)
@@ -182,6 +188,8 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   // Transpose
   lazy val t = new Matrix(getMat.viewDice, mapfn)
 
+  private[scalacolt] lazy val cholesky = new CholeskyDecomposition(cMatrix)
+
   override def apply(row : Int, col : Int) : Double = {
     mapfn.map { fn => fn(getMat.get(row, col)) }.getOrElse { getMat.get(row, col) }
   }
@@ -213,19 +221,17 @@ class Matrix(mat : => DoubleMatrix2D, val mapfn : Option[(Double) => Double] = N
   // else fall back to using SVD
   private lazy val backop : (Matrix) => Matrix = {
     if(isSquare && isSymmetric) {
-      try {
-        val cd = new CholeskyDecomposition(cMatrix)
+      val cd = new CholeskyDecomposition(cMatrix)
+      if( cd.isSymmetricPositiveDefinite ) {
         val fn = { other : Matrix =>
           val soln = cd.solve(other.cMatrix)
           new Matrix(soln)
         }
-        // Try to run the above with a zero input, which may throw:
-        fn(Matrix.sparse(columns, 1))
         fn
-      } catch {
-        case(e : IllegalArgumentException) => { other : Matrix =>
-         new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))
-        }
+      }
+      else {
+        val fn = { other : Matrix => new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix)) }
+        fn
       }
     } else if(isRectangular) { other : Matrix =>
       new Matrix(Matrix.algebra.solve(this.cMatrix, other.cMatrix))

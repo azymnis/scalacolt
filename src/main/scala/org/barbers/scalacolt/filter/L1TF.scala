@@ -54,6 +54,7 @@ case class L1TF(
       val pobj = pobj1 min pobj2
       val dobj = -0.5 * dtzNorm2 + (dy.t * dualVar)
       val gap = pobj - dobj
+      println("gap: " + gap)
       if(gap <= tol) {
         //We stop
         (y - (d.t * dualVar), iter) //No more iterations
@@ -68,8 +69,8 @@ case class L1TF(
         }
         // Calculate Newton Step
         val rz = ddtz - w
-        val sdelta = Matrix.hstack(dualdual1.zipMap(dualLam1) { _ / _ } +
-          dualdual2.zipMap(dualLam2) { _ / _ }, sparse(m, m-1))
+        val sdelta = Matrix.spdiag(dualdual1.zipMap(dualLam1) { _ / _ } +
+          dualdual2.zipMap(dualLam2) { _ / _ })
         val s = ddt - sdelta
         val r = ddtz * (-1) + dy + dualLam1.zipMap(dualLam2) { (f1,f2) =>
           (1.0/f1 - 1.0/f2)/t

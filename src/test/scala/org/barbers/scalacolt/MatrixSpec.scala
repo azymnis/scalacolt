@@ -107,6 +107,14 @@ class MatrixSpec extends Specification {
       (m3 - m4).normF must beCloseTo(0.0, 1e-6)
       (m3 - hstacked).normF must beCloseTo(0.0, 1e-6)
     }
+
+    "produce sparse diagonal" in {
+      val listIn = List(1,2,3)
+      val c1 = ColVector(listIn)
+      val A = Matrix.spdiag(c1)
+      val res : Matrix = List(List(1,0,0),List(0,2,0),List(0,0,3))
+      A must_== res
+    }
   }
 
   "A scalar" should {
