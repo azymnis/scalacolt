@@ -166,6 +166,12 @@ class MatrixSpec extends Specification {
 
       (c1.t - r1).norm2 must beCloseTo(0, 1e-6)
     }
+    "sum multiple vectors" in {
+      val v1 = ColVector(List(1,2,3))
+      val v2 = ColVector(List(2,2,3))
+      val v3 = ColVector(List(3,2,3))
+      ColVector.sum(v1, v2, v3) must be_==((v1 + v2 + v3))
+    }
     "perform dot-product" in {
       val F : Matrix = List(List(1, 2.0, 3), List(4.0, 5, 6.0), List(23.0, 8, 9.0))
       (F.getRow(0) * F.getCol(0)) must beCloseTo(1.0 + 2.0 * 4.0 + 3.0 * 23.0, 1e-5)

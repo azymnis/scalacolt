@@ -30,6 +30,27 @@ object ColVector {
       new ColVector(sd1d)
     }
   }
+
+  // This only makes a single copy and mutably updates it so it can be more efficient
+  def foldLeft(init : ColVector, cols : Seq[ColVector])(fn : (Double,Double) => Double) : ColVector = {
+    lazy val res = {
+      val initV = init.vector.copy
+      cols.foreach { vec =>
+        val opfn = new MappedDoubleDouble(identity _,
+        vec.mapfn.getOrElse(identity _), fn)
+        initV.assign(vec.getVect, opfn)
+      }
+      initV
+    }
+    // This still doesn't evaluate it, but is lazy:
+    new ColVector(res)
+
+  }
+
+  // Add a bunch of columns together. Possibly more efficient than doing a + b + c
+  def sum(cols : ColVector*) : ColVector = {
+    foldLeft(cols.head, cols.tail) { _ + _ }
+  }
 }
 
 /** Immutable Lazy ColVector

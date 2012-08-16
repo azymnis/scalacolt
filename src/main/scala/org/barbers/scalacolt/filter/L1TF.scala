@@ -6,6 +6,7 @@ import scala.annotation.tailrec
 
 import Implicits._
 import Matrix.sparse
+import ColVector.{sum => csum}
 
 case class L1TF(
   y : ColVector, // Input
@@ -23,8 +24,18 @@ case class L1TF(
   val ddt = (d * d.t)
   val dy = (d*y)
 
+  var prev_time = System.currentTimeMillis
+  def startTime {
+    prev_time = System.currentTimeMillis
+  }
+  def printTimeDelta {
+    val current = System.currentTimeMillis
+    println("time delta: " + (current - prev_time))
+    prev_time = current
+  }
 
   def run : (ColVector, Int) = {
+    startTime
     // Zero vector
     val z = ColVector.sparse(Map[Int,Double](), m)
     val ones = ColVector(Array.fill(m)(1.0))
@@ -38,6 +49,7 @@ case class L1TF(
   private def mainLoop(iter : Int, told : Double,
     inTup : (Double, ColVector, ColVector, ColVector, ColVector, ColVector))
     : (ColVector,Int) = {
+    printTimeDelta
     val (step, dualVar, dualdual1, dualdual2, dualLam1, dualLam2) = inTup
     if (iter == 0) {
       (y - (d.t * dualVar), 0) //No more iterations
@@ -46,7 +58,7 @@ case class L1TF(
       //Check the stopping criterion:
       val dtz = (d.t * dualVar)
       val ddtz = (d * dtz)
-      val w = dy - (dualdual1 - dualdual2)
+      val w = csum(dy, (dualdual1 * (-1)), dualdual2)
       val pobj1 = 0.5 * ((w.t) * (ddt\w).getCol(0)) +
         lambda * ((dualdual1 + dualdual2).sum)
       val dtzNorm2 = dtz.norm2
@@ -72,9 +84,10 @@ case class L1TF(
         val sdelta = Matrix.spdiag(dualdual1.zipMap(dualLam1) { _ / _ } +
           dualdual2.zipMap(dualLam2) { _ / _ })
         val s = ddt - sdelta
-        val r = ddtz * (-1) + dy + dualLam1.zipMap(dualLam2) { (f1,f2) =>
-          (1.0/f1 - 1.0/f2)/t
-        }
+        val r = csum(ddtz * (-1),
+          dy,
+          dualLam1.zipMap(dualLam2) { (f1,f2) => (1.0/f1 - 1.0/f2)/t }
+          )
         val dz = (s \ r).getCol(0)
         def dmu(mu1 : ColVector, f1 : ColVector, factor : Double) : ColVector = {
           mu1 + dz.zipMap(mu1) { (x,y) => factor * x * y + 1/t }
@@ -89,12 +102,18 @@ case class L1TF(
           resCent(dualdual1, dualLam1),
           resCent(dualdual2, dualLam2)).norm2
 
-        def stepOf(mu : ColVector, dmu : ColVector) = {
+        def stepOf(mu : ColVector, dmu : ColVector) : Option[Double] = {
           dmu.map { v => if(v < 0) v else 0.0 }
             .nonZeros
             .map { idxV => -0.99 * mu(idxV._1) / idxV._2 }
+            .foldLeft(None : Option[Double]){ (minop, thisV) =>
+              minop.map { _ min thisV }
+                .orElse(Some(thisV))
+            }
         }
-        val newStep = (List(1.0) ++ stepOf(dualdual1, dmu1) ++ stepOf(dualdual2, dmu2)).min
+        val newStep = (List(1.0) ++
+          stepOf(dualdual1, dmu1).toList ++
+          stepOf(dualdual2, dmu2).toList).min
 
         @tailrec
         def lineSearch(lsiter : Int, lsstep : Double) :
